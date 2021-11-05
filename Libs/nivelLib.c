@@ -592,7 +592,7 @@ int capacidad_autooffset(float* capacidad){
     
     while(1){     //mientras este saturado, corrige offset.
         
-        usleep(4000);
+        usleep(8000);   //debug
         capacidad_medida_single(&cap);
         
         //chequeo si no saturo, si saturo modifico el offset:
@@ -608,7 +608,7 @@ int capacidad_autooffset(float* capacidad){
         saltoOffset/= 2;
         
         if(saltoOffset==0){
-            *capacidad= cap;     // satura incluso con offset extremo, fin, pero que devuelva el min o max.
+            *capacidad= cap;     // satura incluso con offset extremo, fin, pero que devuelva el min o max.   //para debug, si satura con offset nulo o maximo, devuelve cero exacto.
             return capdac_offset;
         }
         

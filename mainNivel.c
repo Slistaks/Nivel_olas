@@ -79,7 +79,7 @@ int main()
     int offset_autoEncontrado;
     
     
-    for(int i=0; i<4; i++){
+    for(int i=0; i<4000; i++){
         offset_autoEncontrado= capacidad_autooffset(&capacidad);
         printf("capacidad: %f\noffset encontrado: %d\n", capacidad+offset_autoEncontrado*3.125, offset_autoEncontrado);
         sleep(1);
@@ -94,12 +94,18 @@ int main()
 
     ///TOMAR MEDIDA DE CAPACIDAD:
     
-    capdac_offset= offset_autoEncontrado;		// Nuevo offset a configurar.
-    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss);
+    capdac_offset= offset_autoEncontrado;		// Nuevo offset a configurar.   //comento para debug
+    //capdac_offset= 0;  //debug
+    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss);                          // la comente para debug, para ver si deja de funcionar mal.
+    usleep(8000);   //debug
     
     for(int i=0; i<4; i++){
 
         capacidad_medida_single(&capacidad);
+        
+        
+        //printf("capacidad sin offset saturada?: %f\n", capacidad);   //debug
+        
         
         //chequeo si no saturo:
         if(15.98<capacidad){
@@ -118,14 +124,14 @@ int main()
     printf("\n\n");
 
 
-
+    
     ///BLOQUE QUE MUESTRA MEDIDAS FILTRADAS.
 
     media_confiabilidad_nivel medidaProcesada;   // En esta estructura se guarda la media, la desviacion y el porcentaje de muestras utiles
     float desviacion_aceptable= 0.1;  // en [pF].// respecto del total, al llamar a read_processedData.
     int cantidadMuestras      = 20;                       // Cantidad de muestras que se leeran y procesaran.
 
-    for(int i=0; i<4; i++){
+    for(int i=0; i<4000; i++){
         
         usleep(500000);
         // LEER "cantidadMuestras" Y PROCESAR:
