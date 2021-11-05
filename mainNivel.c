@@ -76,7 +76,7 @@ int main()
 	*/
 
     float capacidad;
-    int offset_autoEncontrado= 8;
+    int offset_autoEncontrado;
     
     
     for(int i=0; i<4; i++){
@@ -115,7 +115,7 @@ int main()
 
 
 
-
+    printf("\n\n");
 
 
 
@@ -125,7 +125,7 @@ int main()
     float desviacion_aceptable= 0.1;  // en [pF].// respecto del total, al llamar a read_processedData.
     int cantidadMuestras      = 20;                       // Cantidad de muestras que se leeran y procesaran.
 
-    for(int i=0; i<40; i++){
+    for(int i=0; i<4; i++){
         
         usleep(500000);
         // LEER "cantidadMuestras" Y PROCESAR:
@@ -160,46 +160,6 @@ int main()
 
 
 
-
-int capacidad_autooffset(float* capacidad){
-    
-    float cap;
-    unsigned char saltoOffset= 0b01000;  // busqueda dicotomica, salto se va a ir dividiendo por 2
-    unsigned char capdac_offset= 0b10000;   //    0 (0pF) < capdac (5 bits) < 31 (96.875pF)
-    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss);
-    
-    capacidad_medida_single(&cap);  //descarto la primer muestra
-    
-    
-    while(1){     //mientras este saturado, corrige offset.
-        
-        usleep(4000);
-        capacidad_medida_single(&cap);
-        
-        //chequeo si no saturo, si saturo modifico el offset:
-        if(15.98<cap){
-            capdac_offset+= saltoOffset;
-        }else if(cap<-15.98){
-            capdac_offset-= saltoOffset;
-        }else{
-            *capacidad= cap;     // si entro aca, no saturo, fin.
-            return capdac_offset;
-        }
-        
-        saltoOffset/= 2;
-        
-        if(saltoOffset==0){
-            *capacidad= cap;     // satura incluso con offset extremo, fin, pero que devuelva el min o max.
-            return capdac_offset;
-        }
-        
-        //configuro el nuevo offset:
-        capacimeter_config(capdac_offset, CUATROCIENTAS_Ss);
-        
-        
-    }
-    
-}
 
 
 

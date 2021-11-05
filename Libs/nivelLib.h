@@ -10,12 +10,22 @@ enum sample_rate{
     CUATROCIENTAS_Ss=0xC00
 };
 
+
+/// Direcciones de los registros MSB donde se almacenan los resultados de las mediciones:
+enum reg_resultado{
+    reg_RESULTADO_NIVEL= 0,                        // Uso el MEAS1
+    reg_RESULTADO_DIFERENCIAL=2,                   // Uso el MEAS2
+};
+
+
+
 /*
 enum tipo_medida{
-    NIVEL= abcd;
-    LIQmenosAIRE= abcd;
+    medidaNIVEL= 8,             // lo uso como mascara en funcion done. Nivel, meas1.
+    medidaDIFERENCIAL= 4,       // diferencial, meas2.
 };
 */
+
 
 /**
  * Estructura usada junto con la funcion read_processedData_mm(.) para guardar la media de las muestras y
@@ -27,6 +37,20 @@ typedef struct media_confiabilidad_nivel_struct {
     float confiabilidad;// relacion entre cantidad de muestras utiles y cantidad de muestras totales.
 
 }media_confiabilidad_nivel;
+
+
+
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+int capacidad_autooffset(float* capacidad);
 
 
 
