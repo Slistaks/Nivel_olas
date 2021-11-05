@@ -1,0 +1,4 @@
+nivel: mainNivel.c Libs/nivelLib.o
+	gcc -Wall -o nivel mainNivel.c Libs/nivelLib.o -lm
+nivelLib.o: nivelLib.c
+	gcc -Wall -o nivelLib.o -c nivelLib.c

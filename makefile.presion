@@ -1,0 +1,4 @@
+presion: mainPresion.c Libs/presion.o
+	gcc -Wall -o presion mainPresion.c Libs/presion.o -lm
+presion.o: presion.c
+	gcc -Wall -o presion.o -c presion.c

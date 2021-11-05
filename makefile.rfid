@@ -1,0 +1,4 @@
+rfid: Libs/rfid.o mainRfid.c
+	gcc -Wall -o rfid mainRfid.c Libs/rfid.o
+rfid.o: rfid.c
+	gcc -Wall -o rfid.o -c rfid.c

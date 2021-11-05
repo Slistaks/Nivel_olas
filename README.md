@@ -1,2 +1,6 @@
-# Nivel_olas
-Un capacitor mide el nivel y dos compensan, uno en liquido y otro en aire
+
+Para compilar:
+1- Abrir la consola en la carpeta actual.
+2- Ejecutar en consola "make clean"
+3- Ejecutar en consola "make nivel"
+4- Ya deberia estar creado el ejecutable.

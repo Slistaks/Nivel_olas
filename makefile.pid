@@ -1,0 +1,6 @@
+pid: mainPid.c Libs/pidLib.o Libs/presion.o
+	gcc -Wall -o pid mainPid.c Libs/pidLib.o Libs/presion.o -lm
+pidLib.o: pidLib.c presion.o
+	gcc -Wall -o pidLib.o -c pidLib.c presion.o
+presion.o: presion.c
+	gcc -Wall -o presion.o -c presion.c

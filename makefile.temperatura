@@ -1,0 +1,4 @@
+temperatura: mainTemperatura.c Libs/temperatura.o
+	gcc -Wall -o temperatura mainTemperatura.c Libs/temperatura.o -lm
+temperatura.o: temperatura.c
+	gcc -Wall -o temperatura.o -c temperatura.c

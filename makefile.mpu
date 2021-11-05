@@ -1,0 +1,4 @@
+mpu: mainMpu.c Libs/mpu.o
+	gcc -Wall -o mpu mainMpu.c Libs/mpu.o
+mpu.o: mpu.c
+	gcc -Wall -o mpu.o -c mpu.c
