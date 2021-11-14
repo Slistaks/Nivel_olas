@@ -19,12 +19,12 @@ enum reg_resultado{
 
 
 
-/*
+
 enum tipo_medida{
-    medidaNIVEL= 8,             // lo uso como mascara en funcion done. Nivel, meas1.
-    medidaDIFERENCIAL= 4,       // diferencial, meas2.
-};
-*/
+    medidaNIVEL= 8,             // lo uso como mascara en funcion done. Nivel, registro meas1.
+    medidaDIFERENCIAL= 4,       // diferencial, registro meas2.
+}tipoMedida;
+
 
 
 /**
@@ -51,6 +51,19 @@ typedef struct media_confiabilidad_nivel_struct {
 //
 //
 int capacidad_autooffset(float* capacidad);
+
+
+
+
+//
+//
+//
+//
+//
+//
+//
+//
+int multiMedidasEnable(unsigned char enable);
 
 
 
@@ -82,7 +95,7 @@ int capacimeter_init(int* file_p, int capdac_offset, enum sample_rate sampleRate
 //		sampleRate   : La tasa de muestreo. Posibles: 100, 200 y 400 muestras por segundo. Usar enum de nivelLib.h.
 // Retorna:
 //		terminar
-int capacimeter_config(int capdac_offset, enum sample_rate sampleRate);
+int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo_medida tipoMedida);
 
 
 
@@ -99,7 +112,7 @@ int capacimeter_config(int capdac_offset, enum sample_rate sampleRate);
 //
 // Retorna:
 //		terminar.
-int capacidad_medida_single(float* cap);
+int capacidad_medida_single(float* cap, enum tipo_medida tipoMedida);
 
 
 
@@ -126,7 +139,7 @@ int capacidad_medida_single(float* cap);
 //      -11: Fallo calcularDesviacion
 //      -12: Fallo calcularMedia
 //
-int read_processed_cap_pF(float desviacion_aceptable_pF, int vectorSize, struct media_confiabilidad_nivel_struct *salidaStruct_p);
+int read_processed_cap_pF(enum tipo_medida tipoMedida, float desviacion_aceptable_pF, int vectorSize, struct media_confiabilidad_nivel_struct *salidaStruct_p);
 
 
 
