@@ -277,6 +277,39 @@ int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo
         return -5;
     }
     
+
+
+
+    // AGREGO OTRO CANAL PARA MEDIDA ABSOLUTA: CANAL 4
+
+
+/*
+
+    ///config meas4 (medicion de cap de nivel):
+    capdac_offset_g= capdac_offset;
+    
+    u_int16_t reg_CONF_MEAS1_= capdac_offset<<5;
+    reg_CONF_MEAS1_|= 0x1000; // capdac enabled.
+
+    //Configuracion para mediciones:
+    txBuffer[1]= (reg_CONF_MEAS1_ & 0xFF00)>>8; //MSB     //txBuffer[1]
+    txBuffer[2]= (reg_CONF_MEAS1_ & 0xFF  );    //LSB     //Configuro el registro 0x08. txBuffer[2]
+    
+    //capacimeter(WRITE, 0x08);
+    if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, 0x08) != 0 ){
+        printf("Failed capacimeter_write first call, in capacimeter_config.\n");
+        return -5;
+    }
+
+
+*/
+    //terminar. agregar a la funcion leer para que lea el canal que se seleccione.s
+
+    // FIN DE AGREGAR OTRO CANAL
+
+
+
+
     
     
     
@@ -604,12 +637,13 @@ int capacidad_autooffset(float* capacidad){             // la medida diferencial
     unsigned char multiMedidas= multiMedidas_f;         // si antes estaba configurado para multiples medidas, guardo aca y al finalizar la funcion restauro la config.
     unsigned char fueraDeRangoSuperior;                 // si se va de rango completo, con esto se si fue fuera del limite superior o inferior.
 
-    //capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL); //comentado por debug.
+    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL); //comentado por debug.
+    // la linea anterior, si se descomenta, el bit done se setea pero la capacidad que mide da mal, da mucho mayor.
     
 
 
-
-    capacidad_medida_single(&cap, medidaNIVEL);  //descarto la primer muestra //comentado por debug
+    usleep(3000);   //tiempo mayor a un Ts. // primer medida da muy alto, no funciona. descartar primer medida? : lo de descartar la primer medida funciona.
+    capacidad_medida_single(&cap, medidaNIVEL);  //descarto la primer muestra -> funciono.
     
     saltoOffset*=2; //debug. desplazo a izda para compenzar el primer desplazamiento a dcha.
 

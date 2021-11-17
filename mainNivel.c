@@ -81,7 +81,7 @@ int main()
     int offset_autoEncontrado;
     
     printf("MEDIDA CON AUTO-OFFSET:\n");
-    for(int i=0; i<2; i++){
+    for(int i=0; i<4; i++){
         offset_autoEncontrado= capacidad_autooffset(&capacidad);
         printf("CAPACIDAD: %f, OFFSET: %d    <<<<<<<<<<<<<<<<\n", capacidad+offset_autoEncontrado*3.125, offset_autoEncontrado);
         usleep(500000);
@@ -176,7 +176,10 @@ int main()
 
 
 
-    multiMedidasEnable(0);  //debug
+    multiMedidasEnable(0);  //debug. deshabilitando las medidas multiples, promedio de medidas funciona siempre.
+    // si no se desactivan las medidas multiples, si la medida diferencial no satura, funciona bien, si la medida diferencial satura
+    // la funcion que hace el promedio satura aunque no tengan relacion. ver.
+    
     ///BLOQUE QUE MUESTRA MEDIDAS FILTRADAS.
 
     printf("MEDIDAS PROMEDIADAS:\n");
