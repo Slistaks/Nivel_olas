@@ -15,6 +15,8 @@ enum sample_rate{
 enum reg_resultado{
     reg_RESULTADO_NIVEL= 0,                        // Uso el MEAS1
     reg_RESULTADO_DIFERENCIAL=2,                   // Uso el MEAS2
+    reg_RESULTADO_MEAS3= 4,                        // MEAS3
+    reg_RESULTADO_MEAS4= 6                        // MEAS4
 };
 
 
@@ -23,6 +25,8 @@ enum reg_resultado{
 enum tipo_medida{
     medidaNIVEL= 8,             // lo uso como mascara en funcion done. Nivel, registro meas1.
     medidaDIFERENCIAL= 4,       // diferencial, registro meas2.
+    medidaMEAS3= 2,
+    medidaMEAS4= 1
 }tipoMedida;
 
 
@@ -50,7 +54,7 @@ typedef struct media_confiabilidad_nivel_struct {
 //
 //
 //
-int capacidad_autooffset(float* capacidad);
+int capacidad_autooffset(float* capacidad, enum tipo_medida tipoMedida);    // modif del orig. agregue tipoMedida.
 
 
 
@@ -64,6 +68,24 @@ int capacidad_autooffset(float* capacidad);
 //
 //
 int multiMedidasEnable(unsigned char enable);
+
+
+
+
+//
+//
+//
+//
+//
+//
+//
+//
+int MEASn_capdac_config(int capdac_offset, enum tipo_medida tipoMedida);
+
+
+
+
+
 
 
 
@@ -95,8 +117,8 @@ int capacimeter_init(int* file_p, int capdac_offset, enum sample_rate sampleRate
 //		sampleRate   : La tasa de muestreo. Posibles: 100, 200 y 400 muestras por segundo. Usar enum de nivelLib.h.
 // Retorna:
 //		terminar
-int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo_medida tipoMedida);
-
+//int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo_medida tipoMedida);  //original
+int capacimeter_config(enum sample_rate sampleRate, enum tipo_medida tipoMedida);
 
 
 

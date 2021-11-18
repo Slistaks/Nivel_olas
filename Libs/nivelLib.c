@@ -22,8 +22,6 @@
 
 #define REPEAT_CONVERSION               0x100       // termina una conversion e inicia otra automaticamente
 #define RST_FLAG                        (1<<7)
-#define CAP_A_NIVEL_PENDIENTE           15.173      //calculado de ensayo. mm/pF.
-#define CAP_A_NIVEL_OFFSET              373.49      //calculado de ensayo.es negativo, pero el menos esta en la expresion donde se lo usa. mm.
 
 
 
@@ -35,10 +33,22 @@ unsigned char multiMedidas_f;     // cuando se mide capacitor nivel y ademas cap
 int multiMedidasEnable(unsigned char enable); // habilita que se mida primero el capacitor de nivel y despues el de referencia.
     
 
-float capacidad_pF_a_nivel_mm(float capacidad);
+
+// direcciones de los registros de configuracion de las medidas:
+enum {
+    regDIR_CONF_MEAS1= 0x8,
+    regDIR_CONF_MEAS2= 0x9,
+    regDIR_CONF_MEAS3= 0xA,
+    regDIR_CONF_MEAS4= 0xB
+};
 
 
-
+enum {
+    pinCIN1= 0,
+    pinCIN2= 1,
+    pinCIN3= 2,
+    pinCIN4= 3
+};
 
 
 
@@ -152,10 +162,11 @@ int errorr;
 
 int fs_nivel;
 
-int mode_g, sampleRate_g, capdac_offset_g;  // Globales, para recargar la configuracion anterior en reset.
+int mode_g, sampleRate_g, capdac_offset_g1, capdac_offset_g3, capdac_offset_g4;  // Globales, para recargar la configuracion anterior en reset.
+enum tipo_medida tipoMedida_g;     // para recargar config ante un reset.
 
 
-int capacimeter_init(int* file_p, int capdac_offset, enum sample_rate sampleRate){
+int capacimeter_init(int* file_p, int capdac_offset, enum sample_rate sampleRate){    //original
     
     fs_nivel= *file_p;
     if (ioctl(fs_nivel, I2C_SLAVE, FDC1004ADDRESS) == -1) {
@@ -163,7 +174,9 @@ int capacimeter_init(int* file_p, int capdac_offset, enum sample_rate sampleRate
         return -1;
     }
     
-    if(capacimeter_config(capdac_offset, sampleRate, medidaNIVEL)!=0){              // por defecto inicia habilitada una sola medicion.
+    //if(capacimeter_config(capdac_offset, sampleRate, medidaNIVEL)!=0){              // por defecto inicia habilitada una sola medicion. original
+    MEASn_capdac_config(capdac_offset, medidaNIVEL);                                  //nueva
+    if(capacimeter_config(sampleRate, medidaNIVEL)!=0){                               //nueva
     	printf("capacimeter_config failed.\n");
     	return -2;
     }
@@ -175,7 +188,6 @@ int capacimeter_init(int* file_p, int capdac_offset, enum sample_rate sampleRate
 
 
 int capacimeter_read(int* file_p, char* rxBuffer_p, char* txBuffer_p, enum reg_resultado reg){         // Parametro es el reg a leer
-//int capacimeter_read(int* file_p, char* rxBuffer_p, char* txBuffer_p, unsigned char reg){         // Parametro es el reg a leer//debug, la de arriba es la real
                             
                             //ESCRIBO EL POINTER REG ANTES DE LEER:
                             
@@ -239,7 +251,7 @@ int capacimeter_done(int* file_p, enum tipo_medida tipoMedida){ // retorna el es
         } else {
 
             //return ( (multiMedidas_f==1) ? (rxBuffer[1] & 0b100) : (rxBuffer[1] & 0b1000) );    //antiguo
-            return tipoMedida & rxBuffer[1];
+            return tipoMedida & rxBuffer[1];    // tipo medida es la mascara del bit done del registro C.
 
         }
     }
@@ -248,21 +260,42 @@ int capacimeter_done(int* file_p, enum tipo_medida tipoMedida){ // retorna el es
 
 
 
-int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo_medida tipoMedida){
+
+
+
+
+
+
+
+
+
+
+
+int capacimeter_config(enum sample_rate sampleRate, enum tipo_medida tipoMedida){
     
+
+    // modificada para que no configure los offsets. con varios canales conviene modif. en funcion nueva.
+
     char txBuffer[3];
     char rxBuffer[3];
+
     multiMedidas_f= (tipoMedida==medidaDIFERENCIAL) ? 1 : 0;    // Este flag lo uso por fuera para saber en que
                                                                 // modo esta.
+    
+
     ///config global para todos los tipos de mediciones:
+
+
+
+    //guardo en globales para reconfigurar ante un reset.
     mode_g= REPEAT;
     sampleRate_g= sampleRate;
+    tipoMedida_g= tipoMedida;
     
     
-    
-    
+    /*      //original:
     ///config meas1 (medicion de cap de nivel):
-    capdac_offset_g= capdac_offset;
+    capdac_offset_g1= capdac_offset;
     
     u_int16_t reg_CONF_MEAS1_= capdac_offset<<5;
     reg_CONF_MEAS1_|= 0x1000; // capdac enabled.
@@ -276,43 +309,16 @@ int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo
         printf("Failed capacimeter_write first call, in capacimeter_config.\n");
         return -5;
     }
-    
-
-
-
-    // AGREGO OTRO CANAL PARA MEDIDA ABSOLUTA: CANAL 4
-
-
-/*
-
-    ///config meas4 (medicion de cap de nivel):
-    capdac_offset_g= capdac_offset;
-    
-    u_int16_t reg_CONF_MEAS1_= capdac_offset<<5;
-    reg_CONF_MEAS1_|= 0x1000; // capdac enabled.
-
-    //Configuracion para mediciones:
-    txBuffer[1]= (reg_CONF_MEAS1_ & 0xFF00)>>8; //MSB     //txBuffer[1]
-    txBuffer[2]= (reg_CONF_MEAS1_ & 0xFF  );    //LSB     //Configuro el registro 0x08. txBuffer[2]
-    
-    //capacimeter(WRITE, 0x08);
-    if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, 0x08) != 0 ){
-        printf("Failed capacimeter_write first call, in capacimeter_config.\n");
-        return -5;
-    }
-
-
+  original  
 */
-    //terminar. agregar a la funcion leer para que lea el canal que se seleccione.s
-
-    // FIN DE AGREGAR OTRO CANAL
 
 
 
 
     
     
-    
+    // este se configura siempre igual, lo nuevo es meas3 y meas4.
+
     ///config meas2 (medicion diferencial capacitor liquido - capacitor aire):
     u_int16_t reg_CONF_MEAS2_= (0b001<<13) | (0b010<<10); //| (CHA->cin2) | (CHB->cin3)    // modifique y no tenia que. corregir.
 
@@ -321,7 +327,7 @@ int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo
     txBuffer[2]= (reg_CONF_MEAS2_ & 0xFF  );    //LSB     //Configuro el registro . txBuffer[2]
     
     //capacimeter(WRITE, );
-    if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, 0x09) != 0 ){
+    if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, regDIR_CONF_MEAS2) != 0 ){
         printf("Failed capacimeter_write first call, in capacimeter_config.\n");
         return -5;
     }
@@ -333,11 +339,19 @@ int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo
 
     ///inicio las mediciones:
     //config de reg 0x0C
-    u_int16_t reg_0x0C_= sampleRate | REPEAT | ( (tipoMedida==medidaDIFERENCIAL) ? (0x80 | 0x40) : 0x80 );      // 0x80->meas1 enable. 0x40->meas2 enable.
+    //u_int16_t reg_0x0C_= sampleRate | REPEAT | ( (tipoMedida==medidaDIFERENCIAL) ? (0x80 | 0x40) : 0x80 );      // 0x80->meas1 enable. 0x40->meas2 enable. original
     
-    //printf("reg C en config: %d\n\n", reg_0x0C_);   //debug
+    //a diferencia de antes ahora se hace de a una sola medida, sea diferencial o no.
+
+
+    u_int16_t reg_0x0C_= sampleRate | REPEAT | (tipoMedida<<4);     // habilito solo uno.
+
     txBuffer[1]= (reg_0x0C_ & 0xFF00)>>8; //MSB
     txBuffer[2]= (reg_0x0C_ & 0xFF  );    //LSB         //Configuro el registro 0x0C
+
+
+
+
     //capacimeter(WRITE, 0x0C);
     if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, 0x0C) != 0 ){
         printf("Failed capacimeter_write call, in capacimeter_config.\n");
@@ -346,6 +360,72 @@ int capacimeter_config(int capdac_offset, enum sample_rate sampleRate, enum tipo
 
     return 0;
 }
+
+
+
+
+int MEASn_capdac_config(int capdac_offset, enum tipo_medida tipoMedida){
+
+    char txBuffer[3];
+    char rxBuffer[3];
+    unsigned char pinCIN;
+    unsigned char regDIR_CONF_MEASn;
+
+
+
+    //guardo en variables globales las configuraciones en caso de reset (reset reconfigura desp del reset)
+    //ademas selecciono el registro donde se guardara la configuracion:
+
+    switch (tipoMedida){
+        
+        case medidaNIVEL:
+            capdac_offset_g1= capdac_offset;
+            pinCIN= pinCIN1;
+            regDIR_CONF_MEASn= regDIR_CONF_MEAS1;
+            break;
+
+        case medidaMEAS3:
+            capdac_offset_g3= capdac_offset;
+            pinCIN= pinCIN3;
+            regDIR_CONF_MEASn= regDIR_CONF_MEAS3;
+            break;
+
+        case medidaMEAS4:
+            capdac_offset_g4= capdac_offset;
+            pinCIN= pinCIN4;
+            regDIR_CONF_MEASn= regDIR_CONF_MEAS4;
+            break;
+
+        default:
+            return -1;
+
+    }
+
+
+
+    
+
+    //escribo registro de configuracion por i2c:
+    u_int16_t reg_CONF_MEASn_= capdac_offset<<5;
+    reg_CONF_MEASn_|= 0x1000; // capdac enabled.
+    reg_CONF_MEASn_|= (pinCIN<<13); //| (CHA->cin)
+
+    //Configuracion para mediciones:
+    txBuffer[1]= (reg_CONF_MEASn_ & 0xFF00)>>8; //MSB
+    txBuffer[2]= (reg_CONF_MEASn_ & 0xFF  );    //LSB
+    
+    //capacimeter(WRITE, dir);
+    if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, regDIR_CONF_MEASn) != 0 ){
+        printf("Failed capacimeter_write first call, in capacimeter_config.\n");
+        return -5;
+    }
+    
+
+    return 0;
+}
+
+
+
 
 
 
@@ -381,103 +461,10 @@ int multiMedidasEnable(unsigned char enable){ // habilita que se mida primero el
 
 
 
-/*
-
-int readAndLog_cap(int* file_p, int cantidad_medidas){
-    
-    char txBuffer[3];
-    char rxBuffer[3];
-    FILE *fichero;
-    if( (fichero = fopen("Log.txt", "a+")) == NULL ){
-        printf("Error al intentar abrir fichero del log.\n");
-        return -8;
-    }
 
 
-    int medida=0;
-    char coma= ',';
-    char str[9];
-    char strcap[9];
-    int j=0;
-    int err;
-    int ret;
-    float capacidadRaw;
-
-    for(int i=0; i<cantidad_medidas; i++){
-    
-    
-        ret= capacimeter_done(&fs_nivel);  //cambiar
-        if(ret<0){
-            printf("error leyendo flag done.\n");
-            return -9;
-        }
-        if(ret==0){
-            usleep(3000);   //esperar 3ms y reintentar
-            ret= capacimeter_done(&fs_nivel);  //cambiar
-            if(ret==0){
-                printf("flag conversion completa no se setea.\n");
-                return -10;
-            }
-            if(ret<0){
-                printf("error leyendo flag done.\n");
-                err= reset(&fs_nivel);
-                if(err!=0){
-                    printf("error en reset.\n");
-                    return -8;
-                }
-                return -9;
-            }
-        }
-        
-        
-        
-        //Leo:
-        //capacimeter(READ, 0);       //Leo registro alto reg0
-        if( (capacimeter_read(file_p, rxBuffer, txBuffer, reg_RESULTADO_NIVEL)) != 0 ){             //cambiar
-            printf("Error en lectura de registro en readAndLog function.\n");
-            return -7;
-        }
-        medida= (*(rxBuffer) << 16) + (*(rxBuffer+1) << 8);
-
-        //capacimeter(READ, 1);        //Leo registro bajo reg1
-        if( (capacimeter_read(file_p, rxBuffer, txBuffer, reg_RESULTADO_NIVEL+1)) != 0 ){           //cambiar
-            printf("Error en lectura de registro en readAndLog function.\n");
-            return -7;
-        }
-        medida= medida + *rxBuffer;   //Los 8LSB son reservados, no son parte del resultado (rxBuffer[1] no interesa).
 
 
-        // CONVERTIR MEDIDA A STRING:
-
-        //SIGNO:
-        if( medida & 0x800000 ){
-            medida= ~medida+1;
-            medida= medida & 0xffffff;
-            medida= -medida;
-        }
-        //SIGNO.
-        capacidadRaw= (float)medida/(1<<19);
-
-
-        sprintf(str, "%d", medida);
-        sprintf(strcap, "%.3f", capacidadRaw);
-        //printf("%s\n", strcap);                   DEBUG, descomentar desp
-        j=0;
-        while(strcap[j]!='\0'){
-            fwrite(&strcap[j], sizeof(char), 1, fichero);
-            j++;
-        }
-        fwrite(&coma, sizeof(coma), 1, fichero);
-
-        //sleep(1);                                   // Poner el tiempo entre medidas (es para debug, despues se borra).
-    }
-
-    //fwrite("\n", 1, 1, fichero);
-    fclose(fichero);
-
-    return 0;
-}
-*/
 
 
 
@@ -492,10 +479,35 @@ int read_processed_cap_pF(enum tipo_medida tipoMedida, float desviacion_aceptabl
     float desviacion_aceptable= (desviacion_aceptable_pF)*(1<<19);    //Convierto pF a cuentas del adc.
 
 
-    unsigned char regResultado= reg_RESULTADO_NIVEL; // cambiar
-    if(tipoMedida==medidaDIFERENCIAL){
-        regResultado= reg_RESULTADO_DIFERENCIAL;
+
+
+
+    unsigned char regResultado;
+
+    switch (tipoMedida){
+
+        case medidaNIVEL:
+            regResultado= reg_RESULTADO_NIVEL;
+            break;
+
+        case medidaDIFERENCIAL:
+            regResultado= reg_RESULTADO_DIFERENCIAL;
+            break;
+
+        case medidaMEAS3:
+            regResultado= reg_RESULTADO_MEAS3;
+            break;
+
+        case medidaMEAS4:
+            regResultado= reg_RESULTADO_MEAS4;
+            break;
+
+        default:
+            break;
+
     }
+
+
 
 
     // TOMO LAS N MUESTRAS:
@@ -565,7 +577,7 @@ int read_processed_cap_pF(enum tipo_medida tipoMedida, float desviacion_aceptabl
     int muestra_signada;
     while(1){      //Se hace iteraciones hasta obtener el vector final con desviacion<desviacion_aceptable.
 
-        if( (desviacion=calcularDesviacion(muestrasUtiles,cantMuestrasUtiles)) < 0 ){
+        if( (desviacion=calcularDesviacion(muestrasUtiles, cantMuestrasUtiles)) < 0 ){
             printf("Error en calculo de desviacion en read_processedData.\n");
             return -11;
         }
@@ -611,8 +623,6 @@ int read_processed_cap_pF(enum tipo_medida tipoMedida, float desviacion_aceptabl
     float capacidad= (float)media/(1<<19);
     
 
-    // Nota 1: Si se descomenta la linea de abajo, la salida es la capacidad absoluta.
-    //capacidad= capacidad + 3.125*capdac_offset_g;
 
     salidaStruct_p->media         = capacidad;
     salidaStruct_p->confiabilidad = cantMuestrasUtiles*100/vectorSize;    // (cantMuestrasUtiles/totales)*100%.
@@ -625,10 +635,12 @@ int read_processed_cap_pF(enum tipo_medida tipoMedida, float desviacion_aceptabl
 
 
 
-int capacidad_autooffset(float* capacidad){             // la medida diferencial no usa capdac (offset interno) por lo que no tiene sentido ejecutar
+//int capacidad_autooffset(float* capacidad){   original          // la medida diferencial no usa capdac (offset interno) por lo que no tiene sentido ejecutar
                                                         // esta funcion para medidas diferenciales.
     
 
+
+int capacidad_autooffset(float* capacidad, enum tipo_medida tipoMedida){         //nueva
     
 
     float cap;
@@ -637,20 +649,19 @@ int capacidad_autooffset(float* capacidad){             // la medida diferencial
     unsigned char multiMedidas= multiMedidas_f;         // si antes estaba configurado para multiples medidas, guardo aca y al finalizar la funcion restauro la config.
     unsigned char fueraDeRangoSuperior;                 // si se va de rango completo, con esto se si fue fuera del limite superior o inferior.
 
-    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL); //comentado por debug.
-    // la linea anterior, si se descomenta, el bit done se setea pero la capacidad que mide da mal, da mucho mayor.
+    MEASn_capdac_config(capdac_offset, tipoMedida);     //nueva
+    capacimeter_config(CUATROCIENTAS_Ss, tipoMedida);   //modificado del original
     
 
 
     usleep(3000);   //tiempo mayor a un Ts. // primer medida da muy alto, no funciona. descartar primer medida? : lo de descartar la primer medida funciona.
-    capacidad_medida_single(&cap, medidaNIVEL);  //descarto la primer muestra -> funciono.
+    capacidad_medida_single(&cap, tipoMedida);  //descarto la primer muestra -> funciono. modificado del original
     
-    saltoOffset*=2; //debug. desplazo a izda para compenzar el primer desplazamiento a dcha.
+    saltoOffset*=2; //desplazo a izda para compenzar el primer desplazamiento a dcha.
 
-    while(1){     //mientras este saturado, corrige offset.
+    while(1){     //mientras este saturado: corrige offset.
         
 
-        //debug:
         if(saltoOffset==0){
             *capacidad= cap;
             // reconfiguro tipo de medicion que habia antes de entrar a esta funcion:
@@ -659,13 +670,13 @@ int capacidad_autooffset(float* capacidad){             // la medida diferencial
         }
 
         saltoOffset/= 2;
-        capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL);
-        usleep(3000);   //debug
-        //debug.
 
-        capacidad_medida_single(&cap, medidaNIVEL);
+        //capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL); //original
+        MEASn_capdac_config(capdac_offset, tipoMedida);     // reconfiguro offset
+        usleep(6000);   //si este delay es de 3ms, mide mal, porque toma una medida con el offset anterior, y no el offset que configure en la linea anterior "MEASn_capdac_conf...".
+
+        capacidad_medida_single(&cap, tipoMedida);      // modif del original
         
-        //printf("\n___________\ncapacidad= %f\ncapdac_offset= %d\nsaltoOffset= %d\n___________\n", cap, capdac_offset, saltoOffset);   //debug   //debug
         
 
         //chequeo si no saturo, si saturo modifico el offset:
@@ -703,17 +714,39 @@ int capacidad_medida_single(float* cap, enum tipo_medida tipoMedida){
     int err;
     int medida=0;
     
-    
-    unsigned char registroResultado= reg_RESULTADO_NIVEL;
 
-    if(tipoMedida==medidaDIFERENCIAL){
-        registroResultado= reg_RESULTADO_DIFERENCIAL;
-        //printf("registro configurado en diferencial, deberia ser: 2. si es 0 esta mal\n");  //debug
+
+    
+    // REGISTRO A LEER:
+    unsigned char registroResultado;
+
+    switch (tipoMedida){
+
+        case medidaNIVEL:
+            registroResultado= reg_RESULTADO_NIVEL;
+            break;
+
+        case medidaDIFERENCIAL:
+            registroResultado= reg_RESULTADO_DIFERENCIAL;
+            break;
+
+        case medidaMEAS3:
+            registroResultado= reg_RESULTADO_MEAS3;
+            break;
+
+        case medidaMEAS4:
+            registroResultado= reg_RESULTADO_MEAS4;
+            break;
+
+        default:
+            break;
+
     }
+
+
+
     
-    //printf("registroResultado= %d\n #######", registroResultado);   ////debug
-    
-    ret= capacimeter_done(&fs_nivel, tipoMedida);  //cambiar
+    ret= capacimeter_done(&fs_nivel, tipoMedida);
     if(ret<0){
         printf("error leyendo flag done.\n");
         return -9;
@@ -753,7 +786,7 @@ int capacidad_medida_single(float* cap, enum tipo_medida tipoMedida){
     }
     medida= (*(rxBuffer) << 16) + (*(rxBuffer+1) << 8);
 
-    //capacimeter(READ, 1);        //Leo registro bajo
+    //capacimeter(READ, );        //Leo registro bajo
     if( (capacimeter_read(&fs_nivel, rxBuffer, txBuffer, registroResultado+1)) != 0 ){    //cambiar
         printf("Error en lectura de registro.\n");
         return -7;
@@ -772,8 +805,6 @@ int capacidad_medida_single(float* cap, enum tipo_medida tipoMedida){
     
     *cap= (float)medida/(1<<19);
 
-    // Nota 2: Si se descomenta la linea de abajo, la salida es la capacidad absoluta.
-    //*cap= *cap + 3.125*capdac_offset_g;
 
     return 0;
     
@@ -787,57 +818,6 @@ int capacidad_medida_single(float* cap, enum tipo_medida tipoMedida){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-int nivel_medida_single(float* nivel){
-    
-    
-    float capacidad;
-    if(capacidad_medida_single(&capacidad, )!=0){
-        printf("Error leyendo capacidad para obtener nivel.\n");
-        return -1;
-    }
-    
-    *nivel= (capacidad + 3.125*capdac_offset_g)*CAP_A_NIVEL_PENDIENTE - CAP_A_NIVEL_OFFSET;
-    
-    return 0;
-    
-}
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-float capacidad_pF_a_nivel_mm(float capacidad){
-    
-    return (capacidad + 3.125*capdac_offset_g)*CAP_A_NIVEL_PENDIENTE - CAP_A_NIVEL_OFFSET;
-    
-}
 
 
 
@@ -847,7 +827,31 @@ int reset(int* file_p){
     
     char txBuffer[3];
     char rxBuffer[3];
+    unsigned char capdac_offset;
     
+
+
+    switch (tipoMedida_g){
+
+        case medidaNIVEL:
+            capdac_offset= capdac_offset_g1;
+            break;
+
+        case medidaMEAS3:
+            capdac_offset= capdac_offset_g3;
+            break;
+
+        case medidaMEAS4:
+            capdac_offset= capdac_offset_g4;
+            break;
+
+        default:
+            break;
+
+    }
+
+
+
     // Reset:
     txBuffer[1] = RST_FLAG;     //msb= rst
     txBuffer[2] = 0x80;         //lsb no importa, tras el reset hay que reconfigurar el ic.
@@ -857,8 +861,9 @@ int reset(int* file_p){
         return -1;
     }
     usleep(100);
-            
-    err= capacimeter_config(capdac_offset_g, sampleRate_g, (multiMedidas_f ? medidaDIFERENCIAL : medidaNIVEL));  // reconfiguro por el reset.
+    
+    MEASn_capdac_config(capdac_offset, tipoMedida_g);
+    err= capacimeter_config(sampleRate_g, tipoMedida_g);  // reconfiguro por el reset.
     if(err!=0){
         printf("error reconfigurando.\n");
         return -2;

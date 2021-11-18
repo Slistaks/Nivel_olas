@@ -5,11 +5,21 @@
 #include <unistd.h>
 #include "Libs/nivelLib.h"
 
+
+//Log generico para lo que sea que se necesite logguear.
 int Log(const char* nombre, float valor);
-int capacidad_autooffset(float* capacidad);
+
+
 
 int main()
 {
+
+
+
+    float capacidad;
+    int capdac_offset= 10;
+    enum tipo_medida tipoDeMedida= medidaNIVEL;
+    //tipoDeMedida= medidaMEAS4;
 
 
     // file descriptor para probar la biblioteca, el file descriptor que pasaria usuario
@@ -19,11 +29,6 @@ int main()
         return -1;
     }
     //fin file descriptor para probar biblioteca
-
-
-
-
-    int capdac_offset= 0;		// el offset que se resta a lo que se medira: (valor real[pF]= valor medido[pF] + capdac_offset*3.125pF)
 
 
 
@@ -41,52 +46,29 @@ int main()
     usleep(100000);
 
 
-
-    // En caso que se quiera cambiar la configuracion en cualquier momento se puede ejecutar:
-    capdac_offset= 10;		// Nuevo offset a configurar.
-    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL);	// sample rate puede ser cualquier elemento del enum de nivelLib.h.
+    
 
 
 
-    /*_____________ Si se quiere logguear:
-
-	
-	Log("nombreDelLog.txt", capacidad);
-	
-	la funcion anterior guarda en modo apendice separando por comas. Por ejemplo si se hace lo siguiente:
-	
-	cap= 1;
-	Log("log.txt", cap);
-	cap= 2;
-	Log("log.txt", cap);
-	cap= 4;
-	Log("log.txt", cap);
-
-	Se creara en caso que no exista un archivo "log.txt", y lo ultimo que contendra es: "1,2,4,".
-
-	Como toma como parametro el nombre del archivo, se puede logguear simultaneamente distintas variables en
-	distintos logs. Como no sobreescribe, puede ser usado dentro de un bucle (como los bucles de ejemplo siguientes).
-
-	*/
-
-    float capacidad;
     
     
 
 
 
 
-    multiMedidasEnable(1);  //debug
+
+
+
+    capacimeter_config(CUATROCIENTAS_Ss, tipoDeMedida);
 
     int offset_autoEncontrado;
     
     printf("MEDIDA CON AUTO-OFFSET:\n");
     for(int i=0; i<4; i++){
-        offset_autoEncontrado= capacidad_autooffset(&capacidad);
+        offset_autoEncontrado= capacidad_autooffset(&capacidad, tipoDeMedida);
         printf("CAPACIDAD: %f, OFFSET: %d    <<<<<<<<<<<<<<<<\n", capacidad+offset_autoEncontrado*3.125, offset_autoEncontrado);
         usleep(500000);
     }
-    
     
     printf("\n\n");
     
@@ -106,19 +88,15 @@ int main()
     ///TOMAR MEDIDA DE CAPACIDAD sin autoOffset:
     
     printf("MEDIDA UNICA SIN AUTO-OFFSET:\n");
-    capdac_offset= offset_autoEncontrado;		// Nuevo offset a configurar.   //comento para debug
-    //capdac_offset= 1;  //debug
-    capacimeter_config(capdac_offset, CUATROCIENTAS_Ss, medidaNIVEL);                          // la comente para debug, para ver si deja de funcionar mal.
     
+    MEASn_capdac_config(offset_autoEncontrado, tipoDeMedida);
+    capacimeter_config(CUATROCIENTAS_Ss, tipoDeMedida);   // nueva
+
     usleep(8000);   //debug
     
     for(int i=0; i<2; i++){
 
-        capacidad_medida_single(&capacidad, medidaNIVEL);
-        
-        
-        //printf("capacidad sin offset saturada?: %f\n", capacidad);   //debug
-        
+        capacidad_medida_single(&capacidad, tipoDeMedida);
         
         //chequeo si no saturo:
         if(15.98<capacidad){
@@ -126,14 +104,11 @@ int main()
         }else if(capacidad<-15.98){
             printf("Saturo. Capacidad muy baja para el offset seteado.\n");
         }else
-            printf("capacidad sin filtro con offset manual: %.2fpF\n", capacidad+capdac_offset*3.125);
+            printf("capacidad sin filtro con offset manual: %.2fpF\n", capacidad+offset_autoEncontrado*3.125);
 
         usleep(500000);
 
     }
-
-
-
     printf("\n\n");
 
 
@@ -152,7 +127,7 @@ int main()
 
     printf("MEDIDAS DIFERENCIALES CIN2-CIN3:\n");
 
-    multiMedidasEnable(1);  // si se usa capacimeter_config(., ., medidaDIFERENCIAL) arriba, no hace falta esta funcion.
+    capacimeter_config(CUATROCIENTAS_Ss, medidaDIFERENCIAL);
     usleep(8000);
 
     for(int i=0; i<2; i++){
@@ -175,14 +150,13 @@ int main()
 
 
 
-
-    multiMedidasEnable(0);  //debug. deshabilitando las medidas multiples, promedio de medidas funciona siempre.
-    // si no se desactivan las medidas multiples, si la medida diferencial no satura, funciona bien, si la medida diferencial satura
-    // la funcion que hace el promedio satura aunque no tengan relacion. ver.
     
     ///BLOQUE QUE MUESTRA MEDIDAS FILTRADAS.
 
     printf("MEDIDAS PROMEDIADAS:\n");
+
+    MEASn_capdac_config(offset_autoEncontrado, tipoDeMedida);
+    capacimeter_config(CUATROCIENTAS_Ss, tipoDeMedida);
 
     media_confiabilidad_nivel medidaProcesada;   // En esta estructura se guarda la media, la desviacion y el porcentaje de muestras utiles
     float desviacion_aceptable= 0.1;  // en [pF].// respecto del total, al llamar a read_processedData.
@@ -192,7 +166,7 @@ int main()
         
         usleep(500000);
         // LEER "cantidadMuestras" Y PROCESAR:
-        err= read_processed_cap_pF(medidaNIVEL, desviacion_aceptable, cantidadMuestras, &medidaProcesada);
+        err= read_processed_cap_pF(tipoDeMedida, desviacion_aceptable, cantidadMuestras, &medidaProcesada);
         
         //chequeo si no saturo:
         if(15.98<medidaProcesada.media){
@@ -201,15 +175,12 @@ int main()
             printf("Saturo. Capacidad muy baja para el offset seteado.\n");
         }else{
             if(err==0){
-                printf("capacidad promediada= %.2fpF\n", medidaProcesada.media+capdac_offset*3.125);  //usar para nivel
+                printf("capacidad promediada= %.2fpF\n", medidaProcesada.media+offset_autoEncontrado*3.125);  //usar para nivel
                 //printf("capacidad promediada= %.2fpF\n", medidaProcesada.media);        // usar para diferencial.
                 printf("confiabilidad       = %.0f%%\n\n", medidaProcesada.confiabilidad);
             }
         }
-        
-        
-        
-        
+
         //sleep(1);
     }
     ///FIN DE BLOQUE QUE MUESTRA MEDIDAS FILTRADAS.
