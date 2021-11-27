@@ -11,6 +11,16 @@ enum sample_rate{
 };
 
 
+
+enum pinCIN{
+    pinCIN1= 0,
+    pinCIN2= 1,
+    pinCIN3= 2,
+    pinCIN4= 3
+};
+
+
+
 /// Direcciones de los registros MSB donde se almacenan los resultados de las mediciones:
 enum reg_resultado{
     reg_RESULTADO_NIVEL= 0,                        // Uso el MEAS1
@@ -84,8 +94,15 @@ int MEASn_capdac_config(int capdac_offset, enum tipo_medida tipoMedida);
 
 
 
-
-
+//
+//
+//
+//
+//
+//
+//
+//
+int MEASn_capdac_config_pin(int capdac_offset, enum pinCIN pin);
 
 
 

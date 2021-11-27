@@ -85,6 +85,99 @@ int main()
 
 
 
+
+
+    printf("\n MEDIDA CIN2     #####################\n");
+    int capdac_abcd= 2;
+    capacimeter_config(CUATROCIENTAS_Ss, medidaMEAS4);          // se habilita la medicion MEAS4
+
+    MEASn_capdac_config_pin(capdac_abcd, pinCIN2);    // se elige el offset y el pin que se leera en MEAS4
+
+    usleep(8000);   //debug
+    
+    for(int i=0; i<10; i++){
+
+        capacidad_medida_single(&capacidad, medidaMEAS4);
+        
+        //chequeo si no saturo:
+        if(15.98<capacidad){
+            printf("Saturo. Capacidad muy alta para el offset seteado.\n");
+        }else if(capacidad<-15.98){
+            printf("Saturo. Capacidad muy baja para el offset seteado.\n");
+        }else
+            printf("capacidad sin filtro con offset manual, CHANNEL MANUAL: %.2fpF\n", capacidad+capdac_abcd*3.125);
+
+        usleep(500000);
+
+    }
+    printf("#####################\n");
+    printf("\n\n");
+
+
+
+
+
+
+
+
+
+
+printf("\n MEDIDA CIN3   #####################\n");
+    //int capdac_abcd= 2;
+    capacimeter_config(CUATROCIENTAS_Ss, medidaMEAS4);          // se habilita la medicion MEAS4
+
+    MEASn_capdac_config_pin(capdac_abcd, pinCIN3);    // se elige el offset y el pin que se leera en MEAS4
+
+    usleep(8000);   //debug
+    
+    for(int i=0; i<10; i++){
+
+        capacidad_medida_single(&capacidad, medidaMEAS4);
+        
+        //chequeo si no saturo:
+        if(15.98<capacidad){
+            printf("Saturo. Capacidad muy alta para el offset seteado.\n");
+        }else if(capacidad<-15.98){
+            printf("Saturo. Capacidad muy baja para el offset seteado.\n");
+        }else
+            printf("capacidad sin filtro con offset manual, CHANNEL MANUAL: %.2fpF\n", capacidad+capdac_abcd*3.125);
+
+        usleep(500000);
+
+    }
+    printf("#####################\n");
+    printf("\n\n");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+
     ///TOMAR MEDIDA DE CAPACIDAD sin autoOffset:
     
     printf("MEDIDA UNICA SIN AUTO-OFFSET:\n");
@@ -115,7 +208,7 @@ int main()
 
 
 
-
+*/
 
 
 
@@ -130,7 +223,7 @@ int main()
     capacimeter_config(CUATROCIENTAS_Ss, medidaDIFERENCIAL);
     usleep(8000);
 
-    for(int i=0; i<2; i++){
+    for(int i=0; i<20; i++){
         capacidad_medida_single(&capacidad, medidaDIFERENCIAL);
         printf("capacidad DIFERENCIAL= %fpF\n", capacidad);
         usleep(500000);
@@ -160,10 +253,10 @@ int main()
 
     media_confiabilidad_nivel medidaProcesada;   // En esta estructura se guarda la media, la desviacion y el porcentaje de muestras utiles
     float desviacion_aceptable= 0.1;  // en [pF].// respecto del total, al llamar a read_processedData.
-    int cantidadMuestras      = 20;                       // Cantidad de muestras que se leeran y procesaran.
+    int cantidadMuestras      = 10;                       // Cantidad de muestras que se leeran y procesaran.
 
-    for(int i=0; i<2; i++){
-        
+    for(int i=0; i<10; i++){
+        i=1;
         usleep(500000);
         // LEER "cantidadMuestras" Y PROCESAR:
         err= read_processed_cap_pF(tipoDeMedida, desviacion_aceptable, cantidadMuestras, &medidaProcesada);

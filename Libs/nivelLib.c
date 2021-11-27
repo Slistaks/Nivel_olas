@@ -43,13 +43,14 @@ enum {
 };
 
 
-enum {
+/* lo pase al .h, si funca borrar este.
+enum pinCIN{
     pinCIN1= 0,
     pinCIN2= 1,
     pinCIN3= 2,
     pinCIN4= 3
 };
-
+*/
 
 
 
@@ -423,6 +424,56 @@ int MEASn_capdac_config(int capdac_offset, enum tipo_medida tipoMedida){
 
     return 0;
 }
+
+
+
+
+
+
+
+
+
+int MEASn_capdac_config_pin(int capdac_offset, enum pinCIN pin){        //medida absoluta en pin elegido
+
+    char txBuffer[3];
+    char rxBuffer[3];
+    unsigned char CHin;
+    unsigned char regDIR_CONF_MEASn;
+
+
+
+    //falta guardar en variables globales las configuraciones en caso de reset (reset reconfigura desp del reset)
+
+    //selecciono el registro donde se guardara la configuracion:
+
+
+    CHin= pin;
+    regDIR_CONF_MEASn= regDIR_CONF_MEAS4;
+
+
+
+
+    //escribo registro de configuracion por i2c:
+    u_int16_t reg_CONF_MEASn_= capdac_offset<<5;
+    reg_CONF_MEASn_|= 0x1000; // capdac enabled.
+    reg_CONF_MEASn_|= (CHin<<13); //| (CHA->cin)
+
+    //Configuracion para mediciones:
+    txBuffer[1]= (reg_CONF_MEASn_ & 0xFF00)>>8; //MSB
+    txBuffer[2]= (reg_CONF_MEASn_ & 0xFF  );    //LSB
+    
+    //capacimeter(WRITE, dir);
+    if( capacimeter_write(&fs_nivel, rxBuffer, txBuffer, regDIR_CONF_MEASn) != 0 ){
+        printf("Failed capacimeter_write first call, in capacimeter_config.\n");
+        return -5;
+    }
+    
+
+    return 0;
+}
+
+
+
 
 
 
